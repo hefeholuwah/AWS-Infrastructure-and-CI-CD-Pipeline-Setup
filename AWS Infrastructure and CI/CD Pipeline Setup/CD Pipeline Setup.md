@@ -8,7 +8,7 @@ This document outlines the design and implementation of a highly available and s
 
 ### Architecture Diagram AmorServ LLC
 
-![Architecture Diagram](./Architecture.svg)
+Architecture Diagram can be found in this link: https://drive.google.com/file/d/17T2-2hMm-F28puh2lxdLDQXMLi0ozqoz/view?usp=sharing
 
 ### Infrastructure Components
 
@@ -19,8 +19,11 @@ This document outlines the design and implementation of a highly available and s
 ###### Settings:
 
 - Name: MyVPC
+
 - IPv4 CIDR block: 10.0.0.0/16
+
 - Enable DNS hostnames: Yes
+
 - Enable DNS support: Yes
 
 ##### Create Subnets:
@@ -33,14 +36,17 @@ This document outlines the design and implementation of a highly available and s
   Name: PublicSubnet1
   Availability Zone: us-east-1a
   IPv4 CIDR block: 10.0.1.0/24
+
 - Public Subnet 2:
   Name: PublicSubnet2
   Availability Zone: us-east-1b
   IPv4 CIDR block: 10.0.2.0/24
+
 - Private Subnet 1:
   Name: PrivateSubnet1
   Availability Zone: us-east-1a
   IPv4 CIDR block: 10.0.3.0/24
+
 - Private Subnet 2:
   Name: PrivateSubnet2
   Availability Zone: us-east-1b
@@ -60,23 +66,25 @@ This document outlines the design and implementation of a highly available and s
   Name: PublicRouteTable
   Routes: 0.0.0.0/0 pointing to the Internet Gateway
   Associate with PublicSubnet1 and PublicSubnet2
+
 - Private Route Table:
   Name: PrivateRouteTable
   Routes: No default route
   Associate with PrivateSubnet1 and PrivateSubnet2
+
 - EC2 Instance (Bastion Host)
   Launch EC2 Instance:
   Action: Create an EC2 instance in one of the public subnets.
 
 ###### Settings:
 
-Name: BastionHost
-AMI: Amazon Linux 2
-Instance Type: t2.micro
-Subnet: PublicSubnet1
-Security Group: Allow SSH (port 22) from your IP address
+- Name: BastionHost
+  AMI: Amazon Linux 2
+  Instance Type: t2.micro
+  Subnet: PublicSubnet1
+  Security Group: Allow SSH (port 22) from your IP address
 
-#### AWS Lambda Functions for the backend services
+##### AWS Lambda Functions for the backend services
 
 - **Function**: Node.js backend services deployed in private subnets.
 - **API Gateway**: Exposing Lambda functions as HTTP endpoints.
@@ -119,79 +127,136 @@ There are 6 six stacks to be deployed which involves:
 
 ###### To deploy these stacks, follow these steps:
 
-- Upload the YAML files to S3 (if needed for cross-referencing).
+- Upload the YAML files to S3 (for cross-referencing).
 - Create a CloudFormation stack for each script:
 - Navigate to the AWS CloudFormation console.
 - Click "Create stack" and select "With new resources (standard)".
 - Upload the respective YAML file and follow the prompts to create the stack.
   Repeat for each script.
 
-### Set Up AWS CodePipeline
+#### CI/CD Pipeline Configuration Guide
 
-AWS CodePipeline orchestrates the steps required to build, test, and deploy your application whenever there is a code change. Here’s how to set it up:
+Using AWS services to automate the build and deployment of your frontend and backend applications.
 
-#### Create a CodePipeline:
+##### Prerequisites
 
-- Open the AWS Management Console and navigate to AWS CodePipeline.
-- Click "Create pipeline".
-- Enter a pipeline name and click "Next".
+1. **Install AWS CLI and Configure**:
+   ```sh
+   aws configure
+   ```
+2. **Install AWS CloudFormation**:
 
-###### Source Stage:
+   - AWS CloudFormation is part of the AWS CLI.
 
-- Choose "Source provider" (e.g., GitHub).
-- Connect your GitHub repository and select the repository and branch you want to use.
-- Click "Next".
+3. **Install AWS CodeBuild**:
+   - AWS CodeBuild is part of AWS services.
 
-###### Build Stage:
+##### Step 1: Prepare Your S3 Bucket
 
-- Choose "Add build stage" and select "AWS CodeBuild".
-- If you don't have an existing CodeBuild project, create a new one.
-- Click "Next".
+1. **Create an S3 Bucket**:
+   ```sh
+   aws s3 mb s3://your-pipeline-bucket
+   ```
 
-###### Deploy Stage:
+##### Step 2: Define and Deploy the Pipeline
 
-- Add multiple deploy stages:
-- Frontend Deploy: Use AWS Amplify.
-- Backend Deploy: Use AWS Lambda.
+1. **Create `pipeline.yaml`**:
 
-###### Review and Create:
+   - Save the provided `pipeline.yaml` script to your local machine.
 
-- Review your pipeline configuration and click "Create pipeline".
+2. **Deploy `pipeline.yaml` Using AWS CloudFormation**:
+   ```sh
+   aws cloudformation create-stack --stack-name MyPipelineStack --template-body file://pipeline.yaml --capabilities CAPABILITY_NAMED_IAM
+   ```
 
-### Set Up AWS CodeBuild
+##### Step 3: Configure AWS CodeBuild Projects
 
-AWS CodeBuild compiles your source code, runs tests, and produces artifacts. Here’s how to set it up:
+1. **Create `buildspec-frontend.yml`**:
 
-#### Create a CodeBuild Project:
+   - Save the provided `buildspec-frontend.yml` script to your frontend project directory.
 
-- Navigate to AWS CodeBuild and click "Create build project".
-- Enter a project name.
-- Source: Connect to your GitHub repository.
-- Environment: Choose a managed image (e.g., aws/codebuild/standard:4.0) and select the appropriate runtime (e.g., Node.js).
+2. **Create `buildspec-backend.yml`**:
+   - Save the provided `buildspec-backend.yml` script to your backend project directory.
 
-###### IAM Role:
+##### Step 4: Configure Your GitHub Repository
 
-Ensure the IAM role associated with CodeBuild has the necessary permissions.
+1. **Generate a GitHub Personal Access Token**:
 
-### Deploy a Frontend App:
+   - Go to GitHub, navigate to Settings > Developer settings > Personal access tokens, and generate a new token with `repo` and `admin:repo_hook` permissions.
 
-- Navigate to the AWS Amplify console.
-- Click "Get Started" under "Deploy".
-- Connect to your GitHub repository and select the repository and branch.
-- Amplify will automatically detect the build settings and create a buildspec.yml if needed.
+2. **Add the GitHub Token to AWS Systems Manager Parameter Store**:
 
-### Set Up Monitoring and Logging with CloudWatch
+   ```sh
+   aws ssm put-parameter --name /github/token --value your-github-token --type SecureString
+   ```
 
-AWS CloudWatch monitors your AWS resources and applications. Here’s how to set it up:
+3. **Update `pipeline.yaml`**:
+   - Ensure the GitHub token and repository details are correctly referenced in your `pipeline.yaml`.
 
-#### Enable CloudWatch Logs for Lambda:
+##### Step 5: Connect AWS CodePipeline to Your GitHub Repository
 
-- Ensure your Lambda function has permissions to write logs to CloudWatch.
-- Logs are automatically pushed to CloudWatch under /aws/lambda/function-name.
+1. **Set Up Source Stage in CodePipeline**:
+   - Configure the Source stage in your pipeline to trigger on code changes pushed to your GitHub repository. This is defined in the `pipeline.yaml` script you already deployed.
 
-##### Create Custom Metrics and Alarms:
+##### Step 6: Build and Deploy the Frontend and Backend
 
-- Use CloudWatch to create custom metrics and set alarms for critical metrics (e.g., invocation errors, latency).
+1. **Push Changes to Your GitHub Repository**:
+
+   - Make sure your frontend and backend repositories are connected to your GitHub account.
+   - Commit and push changes to your GitHub repository. This will trigger the pipeline.
+
+2. **Monitor the Pipeline**:
+   - Go to the AWS Management Console, navigate to CodePipeline, and select your pipeline to monitor the stages and progress.
+3. **Ensure Successful Builds**:
+   - The Source stage will pull the latest code from GitHub.
+   - The Build stage will use the `buildspec-frontend.yml` and `buildspec-backend.yml` to build the projects.
+   - The Deploy stage will deploy the built artifacts to AWS resources defined in your `pipeline.yaml`.
+
+##### Step 7: Verify Deployments
+
+1. **Check AWS Amplify**:
+
+   - Ensure your frontend is deployed and accessible via AWS Amplify.
+   - Navigate to AWS Amplify in the AWS Management Console, and confirm that your React/Next.js application is deployed and running.
+
+2. **Check AWS Lambda**:
+   - Ensure your backend Lambda functions are deployed and running.
+   - Navigate to AWS Lambda in the AWS Management Console, and confirm that your Node.js functions are deployed and operational.
+
+#### Configuring CloudWatch
+
+This guide will help you set up monitoring and logging for your application using AWS CloudWatch.
+
+##### Prerequisites
+
+1. **Install AWS CloudFormation**:
+   - AWS CloudFormation is part of the AWS CLI.
+
+###### Step 1: Define the CloudWatch Configuration
+
+- define configuration by saving in file 'cloudwatch.yaml' file
+
+###### Step 2: Deploy the CloudWatch Configuration
+
+1. **Deploy `cloudwatch.yaml` Using AWS CloudFormation**:
+   - Use the AWS CLI to create a CloudFormation stack from your `cloudwatch.yaml` file.
+   ```sh
+   aws cloudformation create-stack --stack-name CloudWatchStack --template-body file://cloudwatch.yaml --capabilities CAPABILITY_NAMED_IAM
+   ```
+
+##### Step 3: Verify the CloudWatch Alarms
+
+1. **Go to the AWS Management Console**:
+
+   - Navigate to the CloudWatch service.
+
+2. **Check Alarms**:
+
+   - In the CloudWatch console, go to the Alarms section.
+   - Verify that the `LambdaErrorAlarm` and `RDSCpuAlarm` are listed and configured correctly.
+
+3. **Test Alarms (Optional)**:
+   - To test the alarms, you can manually trigger errors in your Lambda functions or increase the load on your RDS instance to see if the alarms are triggered.
 
 #### Set Up SNS for Notifications:
 
