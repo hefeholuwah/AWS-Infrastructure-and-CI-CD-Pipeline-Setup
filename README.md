@@ -8,6 +8,8 @@ This document outlines the design and implementation of a highly available and s
 
 ### Architecture Diagram AmorServ LLC
 
+![Architecture Diagram](./Architecturess.svg)
+
 Architecture Diagram can be found in this link: https://drive.google.com/file/d/17T2-2hMm-F28puh2lxdLDQXMLi0ozqoz/view?usp=sharing
 
 ### Infrastructure Components
