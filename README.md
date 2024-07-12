@@ -10,7 +10,7 @@ This document outlines the design and implementation of a highly available and s
 
 ![Architecture Diagram](./Architecturess.svg)
 
-Architecture Diagram can be found in this link: https://drive.google.com/file/d/17T2-2hMm-F28puh2lxdLDQXMLi0ozqoz/view?usp=sharing
+Architecture Diagram can be found in this link: https://lucid.app/lucidchart/d4cb3bf5-d42b-455f-aa30-dfa84d974381/edit?viewport_loc=-1882%2C-801%2C2687%2C1282%2C0_0&invitationId=inv_70d56535-bc72-4058-93b3-4bcb1161ca3b
 
 ### Infrastructure Components
 
