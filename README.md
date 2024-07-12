@@ -8,7 +8,7 @@ This document outlines the design and implementation of a highly available and s
 
 ### Architecture Diagram AmorServ LLC
 
-![Architecture Diagram](./Architecture.svg)
+![Architecture Diagram](./Architectures.svg)
 
 ### Infrastructure Components
 
